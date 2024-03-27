@@ -1,0 +1,69 @@
+---
+- name: Check if Drupal is already installed
+  stat:
+    path: /var/www/html/drupal/index.php
+  register: drupal_installed
+
+- name: Download Drupal
+  get_url:
+    url: "https://www.drupal.org/download-latest/tar.gz"
+    dest: "/tmp/drupal-latest.tar.gz"
+    timeout: 60
+  when: not drupal_installed.stat.exists
+
+- name: Extract Drupal
+  unarchive:
+    src: "/tmp/drupal-latest.tar.gz"
+    dest: "/var/www/html/"
+    remote_src: yes
+    creates: "/var/www/html/drupal/index.php"
+  when: not drupal_installed.stat.exists
+
+- name: Set permissions for Drupal directory
+  file:
+    path: "/var/www/html/drupal"
+    state: directory
+    owner: apache
+    group: apache
+    mode: '0755'
+  when: not drupal_installed.stat.exists
+
+- name: Check if Drupal database exists
+  mysql_db:
+    login_user: "{{ mysql_user }}"
+    login_password: "{{ mysql_password }}"
+    name: "{{ mysql_db }}"
+    state: dump
+  register: drupal_db_exists
+  ignore_errors: yes
+
+- name: Create Drupal database
+  mysql_db:
+    login_user: "{{ mysql_user }}"
+    login_password: "{{ mysql_password }}"
+    name: "{{ mysql_db }}"
+    state: present
+  when: drupal_db_exists.failed
+
+- name: Configure Drupal settings file
+  template:
+    src: settings.php.j2
+    dest: "/var/www/html/drupal/sites/default/settings.php"
+    owner: apache
+    group: apache
+    mode: '0644'
+  when: not drupal_installed.stat.exists
+
+- name: Ensure virtual host configuration for Drupal
+  template:
+    src: drupal.conf.j2
+    dest: "/etc/httpd/conf.d/drupal.conf"
+  notify: restart apache
+
+- name: Ensure SELinux is configured for Drupal (if applicable)
+  become: yes
+  sefcontext:
+    target: '/var/www/html/drupal(/.*)?'
+    setype: httpd_sys_rw_content_t
+    state: present
+  when: ansible_selinux.status == "enabled"

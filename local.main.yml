@@ -1,0 +1,18 @@
+---
+- hosts: local
+  become: true
+  vars_files:
+    - vars/main.yml
+    - vars/secrets.yml
+
+  pre_tasks:
+    - name: Include SSL variables
+      include_vars:
+        file: vars/ssl_vars.yml
+      when: configure_ssl
+
+  roles:
+    - lamp_install
+    - drupal_install
+    - role: ansible-role-certbot
+      when: configure_ssl

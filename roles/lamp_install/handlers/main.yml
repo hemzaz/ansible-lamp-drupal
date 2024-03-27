@@ -1,0 +1,10 @@
+---
+- name: restart apache
+  systemd:
+    name: httpd
+    state: restarted
+
+- name: restart php-fpm
+  systemd:
+    name: php-fpm
+    state: restarted

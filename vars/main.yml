@@ -1,0 +1,22 @@
+# vars/main.yml
+
+# MySQL Configuration
+mysql_db: "drupal_db"
+mysql_user: "drupal_user"
+
+# PHP Configuration
+php_version: "8.0"
+php_memory_limit: "256M"
+php_upload_max_filesize: "64M"
+php_post_max_size: "64M"
+php_max_execution_time: "30"
+
+# Drupal Configuration
+drupal_version: "9.2.0"
+drupal_domain: "example.com"
+drupal_site_name: "My Drupal Site"
+drupal_server_name: "{{ drupal_domain }}"
+drupal_server_alias: "www.{{ drupal_domain }}"
+
+# System Configuration
+system_timezone: "UTC"

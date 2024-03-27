@@ -1,0 +1,74 @@
+# roles/lamp_install/tasks/main.yml
+
+- name: Ensure Apache is installed
+  yum:
+    name: httpd httpd-tools
+    state: present
+
+- name: Ensure Apache is enabled and running
+  systemd:
+    name: httpd
+    enabled: yes
+    state: started
+
+- name: Ensure EPEL and REMI repos are installed for PHP 8.1
+  yum:
+    name:
+      - https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
+      - https://rpms.remirepo.net/enterprise/remi-release-8.rpm
+    state: present
+
+- name: Reset PHP module
+  command: dnf module reset php -y
+
+- name: Enable PHP 8.1 module stream
+  command: dnf module enable php:remi-8.1 -y
+
+- name: Install PHP and necessary extensions
+  yum:
+    name:
+      - php
+      - php-opcache
+      - php-gd
+      - php-curl
+      - php-mysqlnd
+    state: present
+
+- name: Ensure PHP-FPM is enabled and running
+  systemd:
+    name: php-fpm
+    enabled: yes
+    state: started
+
+- name: Check if MariaDB is running
+  shell: systemctl is-active mariadb
+  changed_when: false
+  failed_when: false
+  register: mariadb_service_status
+
+- name: Ensure MariaDB is installed
+  yum:
+    name: mariadb-server
+    state: present
+  when: mariadb_service_status.stdout != "active"
+
+- name: Ensure MariaDB is enabled and running
+  systemd:
+    name: mariadb
+    enabled: yes
+    state: started
+  when: mariadb_service_status.stdout != "active"
+
+- name: Secure MariaDB Installation
+  expect:
+    command: mysql_secure_installation
+    responses:
+      'Enter current password for root \(enter for none\)': 'ENTER_YOUR_EXISTING_OR_NEW_ROOT_PASSWORD_HERE'
+      'Set root password\? \[Y/n\]': 'n'
+      'Remove anonymous users\? \[Y/n\]': 'Y'
+      'Disallow root login remotely\? \[Y/n\]': 'Y'
+      'Remove test database and access to it\? \[Y/n\]': 'Y'
+      'Reload privilege tables now\? \[Y/n\]': 'Y'
+    echo: true
+  ignore_errors: yes
+  when: mariadb_service_status.stdout != "active"
