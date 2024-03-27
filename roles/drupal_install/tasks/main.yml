@@ -1,19 +1,23 @@
 ---
 - name: Check if Drupal is already installed
   stat:
-    path: /var/www/html/drupal/index.php
+    path: "/var/www/html/drupal/index.php"
   register: drupal_installed
+
+- name: Define Drupal download URL
+  set_fact:
+    drupal_download_url: "https://ftp.drupal.org/files/projects/drupal-{{ drupal_version }}.tar.gz"
 
 - name: Download Drupal
   get_url:
-    url: "https://www.drupal.org/download-latest/tar.gz"
-    dest: "/tmp/drupal-latest.tar.gz"
+    url: "{{ drupal_download_url }}"
+    dest: "/tmp/drupal-{{ drupal_version }}.tar.gz"
     timeout: 60
   when: not drupal_installed.stat.exists
 
 - name: Extract Drupal
   unarchive:
-    src: "/tmp/drupal-latest.tar.gz"
+    src: "/tmp/drupal-{{ drupal_version }}.tar.gz"
     dest: "/var/www/html/"
     remote_src: yes
     creates: "/var/www/html/drupal/index.php"
